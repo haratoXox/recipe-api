@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe API Integration</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.rawgit.com/michalsnik/aos/2.1.1/dist/aos.css">
+
+<style>
+  
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: url('https://unsplash.com/photos/7W8xNl5Q7_A') no-repeat center center fixed;
+    background-size: cover;
+  }
+
+  /* Existing styles */
+
+  /* Style for the rectangular box */
+  .recipeItem {
+    flex: 0 0 calc(25% - 20px); /* Adjusted width to fit four items in a row */
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: transparent; /* Removed gray background */
+    transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out; /* Added background-color transition */
+  }
+  /* Style for the image at the top */
+  .recipeImage {
+    width: 100%;
+    height: auto;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
+
+  /* Add hover effect */
+  .recipeItem:hover {
+    transform: translateY(-5px);
+    background-color: #00ffd5; /* New background color on hover */
+  }
+</style>
+
+<style>
+  /* Styles for the loader */
+#loader {
+  display: none;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #ffffff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+  <div class="text-center py-10">
+    <h1 class="text-3xl font-bold mb-4">Recipe Search</h1>
+    <div class="flex justify-center items-center space-x-4">
+      <input type="text" id="recipeInput" class="w-64 py-2 px-4 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Enter an ingredient">
+      <button id="searchButton" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none cursor-pointer">Search</button>
+    </div>
+  </div>
+  
+  <div class="flex flex-wrap justify-center" id="recipeList">
+    <!-- Recipes will be dynamically added here -->
+  </div>
+
+  <div class="flex justify-center mt-4" id="nextButtonContainer" style="display: none;">
+    <button id="nextPageButton" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none cursor-pointer">Next Page</button>
+  </div>
+   
+<!-- loader code -->
+
+  <div id="loader" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden">
+    <div class="spinner"></div>
+  </div>
+  <script>
+    
+  </script>
+
+  <script>
+    const searchButton = document.getElementById('searchButton');
+    const nextPageButton = document.getElementById('nextPageButton');
+    const nextButtonContainer = document.getElementById('nextButtonContainer');
+    const recipeInput = document.getElementById('recipeInput');
+    const recipeList = document.getElementById('recipeList');
+    const apiKey = '9d71d35593833c4e03c5d3f6972d5685'; // Replace with your Edamam API key
+    const app_id = '5ef2c660';
+    let fromIndex = 0; // Starting index for fetching recipes
+    let searchDone = false; // Track if the first search is done
+
+    searchButton.addEventListener('click', () => {
+      fromIndex = 0; // Reset index when a new search is initiated
+      const ingredient = recipeInput.value.trim();
+      if (ingredient !== '') {
+        fetchRecipes(ingredient, fromIndex);
+      }
+    });
+
+    nextPageButton.addEventListener('click', () => {
+      fromIndex += 10; // Increase the index by 10 to fetch the next page
+      const ingredient = recipeInput.value.trim();
+      if (ingredient !== '') {
+        fetchRecipes(ingredient, fromIndex);
+      }
+    });
+
+    function fetchRecipes(ingredient, from) {
+      const apiUrl = `https://api.edamam.com/search?q=${ingredient}&app_id=${app_id}&app_key=${apiKey}&from=${from}`;
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          displayRecipes(data.hits);
+          if (!searchDone) {
+            searchDone = true;
+            nextButtonContainer.style.display = 'flex';
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching recipes:', error);
+        });
+    }
+
+    function displayRecipes(recipes) {
+      recipeList.innerHTML = '';
+      recipes.forEach(recipeData => {
+        const recipe = recipeData.recipe;
+        const recipeItem = document.createElement('div');
+        recipeItem.classList.add('recipeItem', 'hover:bg-gray-200');
+        recipeItem.innerHTML = `
+          <img src="${recipe.image}" alt="${recipe.label}" class="recipeImage">
+          <h2 class="text-xl font-semibold">${recipe.label}</h2>
+          <a href="${recipe.url}" target="_blank" class="text-blue-500 hover:underline cursor-pointer mt-2">View Recipe</a>
+          <div class="hidden mt-2 text-gray-600 recipeDropdown">${recipe.url}</div>
+          <p class="mt-2 text-gray-600">Ingredients: ${recipe.ingredientLines.join(', ')}</p>
+        `;
+        recipeList.appendChild(recipeItem);
+      });
+    }
+
+    function toggleDropdown(button) {
+      const dropdown = button.nextElementSibling;
+      dropdown.classList.toggle('hidden');
+    }
+  </script>
+
+  <script src="https://cdn.rawgit.com/michalsnik/aos/2.1.1/dist/aos.js"></script>
+  <script>
+    AOS.init({
+      duration: 1200,
+    });
+
+    function handleScroll() {
+      const scrollPosition = window.scrollY;
+      const scrollBox = document.querySelector('.scrollBox');
+      const scrollBoxHidden = document.querySelector('.scrollBoxHidden');
+
+      if (scrollPosition > 100) {
+        scrollBoxHidden.style.visibility = 'visible';
+        scrollBoxHidden.classList.add('opacity-100');
+        scrollBox.style.opacity = '0';
+      } else {
+        scrollBoxHidden.style.visibility = 'hidden';
+        scrollBoxHidden.classList.remove('opacity-100');
+        scrollBox.style.opacity = '1';
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll);
+
+
+    
+  </script>
+</body>
+</html>
